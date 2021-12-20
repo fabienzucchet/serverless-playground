@@ -30,9 +30,20 @@ provider:
   region: eu-west-3
 
 # you can add statements to the Lambda function's IAM Role here
-#  iam:
-#    role:
-#      statements:
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - dynamodb:DescribeTable
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            - "Fn::GetAtt": [UserTable, Arn]
 #        - Effect: "Allow"
 #          Action:
 #            - "s3:ListBucket"
@@ -48,8 +59,8 @@ provider:
 #                - "/*"
 
 # you can define service wide environment variables here
-#  environment:
-#    variable1: value1
+  environment:
+    DYNAMODB_TABLE_NAME: ${self:service}-users
 
 # you can add packaging information here
 #package:
@@ -65,6 +76,18 @@ functions:
     events:
       - httpApi:
           path: /status
+          method: get
+  create:
+    handler: handler.create
+    events:
+      - httpApi:
+          path: /v1/user
+          method: post
+  list:
+    handler: handler.list
+    events:
+      - httpApi:
+          path: /v1/user
           method: get
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
@@ -117,3 +140,17 @@ functions:
 #     NewOutput:
 #       Description: "Description for the output"
 #       Value: "Some output value"
+
+resources:
+  Resources:
+    UserTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-users
+        AttributeDefinitions:
+          - AttributeName: email
+            AttributeType: S
+        KeySchema:
+          - AttributeName: email
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
